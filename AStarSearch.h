@@ -37,8 +37,7 @@ struct NodeInfo {
 
 class aStarSearch {
 public:
-	map<Node, NodeInfo> visited;//
-
+	map<Node, NodeInfo> visited;
 	size_t openedCount;
 	int max_depth;
 	int nPushed;

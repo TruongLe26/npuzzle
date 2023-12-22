@@ -6,10 +6,9 @@
 #define FOCALSEARCH_H
 
 #include "Node.h"
-#include <queue>
-#include <vector>
 #include <unordered_map>
 #include <cmath>
+#include <set>
 
 #define OPEN 0
 #define FOCAL 1
@@ -31,20 +30,57 @@ typedef int parent_t;
 using namespace std;
 
 class FocalSearch {
+	struct OpenSetComparator {
+		const FocalSearch& fs;
+		const Node& goal;
+
+		OpenSetComparator(const FocalSearch& search, const Node& g) : fs(search), goal(g) {}
+
+		bool operator()(const pair<double, Node>& a, const pair<double, Node>& b) const {
+			double f_a = fs.fValue(a.second, goal);
+			double f_b = fs.fValue(b.second, goal);
+			return f_a == f_b ? a.second < b.second : f_a < f_b;
+		}
+	};
+	struct FocalSetComparator {
+		const FocalSearch& fs;
+		const Node& goal;
+
+		FocalSetComparator(const FocalSearch& search, const Node& g) : fs(search), goal(g) {}
+
+		bool operator()(const Node& a, const Node& b) const {
+			return fs.hValue(a, goal) < fs.hValue(b, goal);
+		}
+	};
 public:
 	map<Node, NodeInfo> visited;
 	size_t openedCount;
 	int max_depth;
 	int nPushed;
+	int heuristicType = 0;
 
-	int fValue(const Node& current, const Node& goal) const {
+	int hValue(const Node& current, const Node& goal) const {
 		if (heuristicType == MANHATTAN_DISTANCE) return ManHattan(current, goal);
 		return 0;
 	}
 
-    bool isValid(int x, int y) { return x >= 0 && y >= 0 && x < Node::boardSqSize && y < Node::boardSqSize; }
+	int fValue(const Node& current, const Node& goal) const {
+		// NodeInfo &currentInfo = visited[current];
+		// if (heuristicType == MANHATTAN_DISTANCE) return currentInfo.cost + ManHattan(current, goal);
+		// return 0;
+		auto it = visited.find(current);
+		if (it != visited.end()) {
+			const NodeInfo &currentInfo = it->second;
+			if (heuristicType == MANHATTAN_DISTANCE) {
+				return currentInfo.cost + ManHattan(current, goal);
+			}
+		}
+		return 0;
+	}
 
-    int heuristicType = 0;
+    bool isValid(int x, int y) {
+		return x >= 0 && y >= 0 && x < Node::boardSqSize && y < Node::boardSqSize;
+	}
 
 	static double HammingDistance(const Node &a, const Node &b) {
 		int conflicts = 0;
@@ -56,8 +92,8 @@ public:
 
 	static double ManHattan(const Node &a, const Node &b) {
 		int sum = 0;
-		puzzle_t pR[(Node::boardSqSize * Node::boardSqSize) + 1];
-		puzzle_t pC[(Node::boardSqSize * Node::boardSqSize) + 1];
+		puzzle_t pR[Node::boardSqSize * Node::boardSqSize + 1];
+		puzzle_t pC[Node::boardSqSize * Node::boardSqSize + 1];
 		for (int r = 0; r < Node::boardSqSize; r++) {
 			for (int c = 0; c < Node::boardSqSize; c++) {
 				pR[a.A[r][c]] = static_cast<puzzle_t>(r);
@@ -73,8 +109,8 @@ public:
 
 	static double nLinearConflicts(const Node &a, const Node &b) {
 		int conflicts = 0;
-		puzzle_t pR[(Node::boardSqSize * Node::boardSqSize) + 1];
-		puzzle_t pC[(Node::boardSqSize * Node::boardSqSize) + 1];
+		puzzle_t pR[Node::boardSqSize * Node::boardSqSize + 1];
+		puzzle_t pC[Node::boardSqSize * Node::boardSqSize + 1];
 		for (int r = 0; r < Node::boardSqSize; r++) {
 			for (int c = 0; c < Node::boardSqSize; c++) {
 				pR[a.A[r][c]] = static_cast<puzzle_t>(r);
@@ -123,68 +159,97 @@ public:
 	}
 
 	int FocalSearchAlgorithm(const Node &start, const Node &goal, double w, double ratio) {
-        priority_queue<pair<double, Node>> open;
-        priority_queue<Node, vector<Node>, greater<Node>> focal;
-        map<Node, bool> isOpen;
+
+		OpenSetComparator openSetComparator(*this, goal);
+		set<pair<double, Node>, OpenSetComparator> open(openSetComparator);
+
+		FocalSetComparator focalSetComparator(*this, goal);
+		set<Node, FocalSetComparator> focalSet(focalSetComparator);
+
         map<Node, bool> isFocal;
 
-        open.push({0, start});
-        focal.push(start);
-        isOpen[start] = true;
+        open.insert({0, start});
+        focalSet.insert(start);
+
+		visited[start] = {false, 0, EOF};
+
         int nExpanded = 0;
+		max_depth = 0;
+		nPushed = 0;
 
-        while (!focal.empty()) {
+        while (!focalSet.empty()) {
+        	// fmin is f(head(open))
+			double fmin = open.empty() ? numeric_limits<double>::infinity() : open.begin()->first;
+
             Node current;
-            if (open.empty() || ((rand() % 100) < (ratio * 100))) {
-                current = focal.top();
-                focal.pop();
-                isFocal[current] = false;
-            } else {
-                current = open.top().second;
-                open.pop();
-                isOpen[current] = false;
-            }
 
-			// NodeInfo &curInfo = visited[current];
+            // if (open.empty() || rand() % 100 < ratio * 100) {
+            //     current = *focalSet.begin();
+            //     focalSet.erase(focalSet.begin());
+            // 	open.erase({fValue(current, goal), current});
+            // } else {
+            //     current = open.begin()->second;
+            //     open.erase(open.begin());
+            //     isFocal[current] = false;
+            // }
+
+        	current = *focalSet.begin();
+        	focalSet.erase(focalSet.begin());
+        	open.erase({fValue(current, goal), current});
+
+			NodeInfo &curInfo = visited[current];
+        	curInfo.isClosed = true;
             nExpanded++;
+        	max_depth = max(max_depth, visited[current].cost);
 
             if (current == goal) return nExpanded;
+        	if (curInfo.cost > LIMIT_DEPTH) {
+        		cout << "Height limit Exceeded @" << endl << current;
+        		break;
+        	}
+        	if (visited.size() > NODE_LIMIT) {
+        		cout << "Node limit Exceeded @" << endl << current;
+        		break;
+        	}
+
+        	int zX = -1, zY = -1;
+        	Node::getZeroPos(current, zX, zY);
 
             for (direction_t dir = 0; dir < 4; dir++) {
-                int zX, zY;
+            	int zXnew = zX + dirX[dir];
+            	int zYnew = zY + dirY[dir];
 
-                if (Node::getZeroPos(current, zX, zY)) {
-                    int zXnew = zX + dirX[dir];
-                    int zYnew = zY + dirY[dir];
+            	if (isValid(zXnew, zYnew)) {
+            		Node v = current;
+            		swap(v.A[zX][zY], v.A[zXnew][zYnew]);
+            		bool isVisited = visited.find(v) != visited.end();
+            		if (isVisited && visited[v].isClosed) continue;
 
-                    if (isValid(zXnew, zYnew)) {
-                        Node v = current.getNode(dir, zX, zY);
-                        // double newCost = v.Heuristic(goal);
-						// double newCost = curInfo.cost + 1;
-                    	double newCost = fValue(v, goal);
+            		double newCost = curInfo.cost + 1;
+            		++nPushed;
+            		visited[v] = {false, static_cast<cost_t>(newCost), Node::oppositeDirection(dir)};
+            		double Priority = newCost + Heuristic(v, goal);
+            		open.insert({Priority, v});
 
-                        if (!isOpen[v] && !isFocal[v]) {
-                            open.push({newCost, v});
-                            isOpen[v] = true;
-                        } else if (newCost < w * fValue(current, goal)) {
-                            focal.push(v);
-                            isFocal[v] = true;
-                        }
+            		if (Priority <= w * fmin) {
+            			focalSet.insert(v);
+            			isFocal[v] = true;
+            		}
+            	}
+            }
+
+            if (!open.empty() && open.begin()->first > fmin) {
+                for (auto it = open.begin(); it != open.end(); ++it) {
+                    if (fValue(it->second, goal) > w * fmin ||
+                        fValue(it->second, goal) <= w * open.begin()->first) {
+                        focalSet.insert(it->second);
+                        isFocal[it->second] = true;
                     }
                 }
             }
-        	// Update lower bound
-            if (!open.empty() && open.top().first < w * fValue(current, goal)) {
-                for (auto it = isOpen.begin(); it != isOpen.end(); ++it) {
-                    if (fValue(it->first, goal) > w * fValue(current, goal) ||
-                        fValue(it->first, goal) < w * open.top().first) {
-                        focal.push(it->first);
-                        isFocal[it->first] = true;
-                    }
-                }
-            }
+
         }
-
+		openedCount = visited.size();
         return nExpanded;
     }
 

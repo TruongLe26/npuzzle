@@ -9,11 +9,110 @@ Goal:
   7   8     
  ----------- 
 # Linear Conflicts Heuristics: 
-No of Steps: 0
-No of Nodes Expanded: 4
-No of Nodes Opened: 0
-No of Nodes Pushed: 0
-Max Depth Reached: 0
-Execution Time: 1.0989ms
+No of Steps: 20
+No of Nodes Expanded: 201
+No of Nodes Opened: 326
+No of Nodes Pushed: 330
+Max Depth Reached: 20
+Execution Time: 6.9315ms
 
 # ManHattan Distance Heuristics: 
+No of Steps: 20
+No of Nodes Expanded: 283
+No of Nodes Opened: 449
+No of Nodes Pushed: 453
+Max Depth Reached: 20
+Execution Time: 8.3521ms
+
+#Hamming Distance Heuristics: 
+No of Steps: 20
+No of Nodes Expanded: 2997
+No of Nodes Opened: 4853
+No of Nodes Pushed: 4855
+Max Depth Reached: 20
+Execution Time: 69.1149ms
+
+  1   5     
+  7   6   4 
+  3   8   2 
+ ----------- 
+  1       5 
+  7   6   4 
+  3   8   2 
+ ----------- 
+  1   6   5 
+  7       4 
+  3   8   2 
+ ----------- 
+  1   6   5 
+  7   4     
+  3   8   2 
+ ----------- 
+  1   6   5 
+  7   4   2 
+  3   8     
+ ----------- 
+  1   6   5 
+  7   4   2 
+  3       8 
+ ----------- 
+  1   6   5 
+  7   4   2 
+      3   8 
+ ----------- 
+  1   6   5 
+      4   2 
+  7   3   8 
+ ----------- 
+  1   6   5 
+  4       2 
+  7   3   8 
+ ----------- 
+  1       5 
+  4   6   2 
+  7   3   8 
+ ----------- 
+  1   5     
+  4   6   2 
+  7   3   8 
+ ----------- 
+  1   5   2 
+  4   6     
+  7   3   8 
+ ----------- 
+  1   5   2 
+  4       6 
+  7   3   8 
+ ----------- 
+  1   5   2 
+  4   3   6 
+  7       8 
+ ----------- 
+  1   5   2 
+  4   3   6 
+  7   8     
+ ----------- 
+  1   5   2 
+  4   3     
+  7   8   6 
+ ----------- 
+  1   5   2 
+  4       3 
+  7   8   6 
+ ----------- 
+  1       2 
+  4   5   3 
+  7   8   6 
+ ----------- 
+  1   2     
+  4   5   3 
+  7   8   6 
+ ----------- 
+  1   2   3 
+  4   5     
+  7   8   6 
+ ----------- 
+  1   2   3 
+  4   5   6 
+  7   8     
+ ----------- 
