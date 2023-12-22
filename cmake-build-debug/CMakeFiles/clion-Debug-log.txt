@@ -1,4 +1,0 @@
-"C:\Users\DELL 7480\AppData\Local\Programs\CLion Nova\bin\cmake\win\x64\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug "-DCMAKE_MAKE_PROGRAM=C:/Users/DELL 7480/AppData/Local/Programs/CLion Nova/bin/ninja/win/x64/ninja.exe" -G Ninja -S "C:\Users\DELL 7480\CLionProjects\npuzzle" -B "C:\Users\DELL 7480\CLionProjects\npuzzle\cmake-build-debug"
--- Configuring done (0.7s)
--- Generating done (0.0s)
--- Build files have been written to: C:/Users/DELL 7480/CLionProjects/npuzzle/cmake-build-debug
