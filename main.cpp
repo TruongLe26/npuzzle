@@ -50,35 +50,35 @@ void printFsSolution(FocalSearch &focal_search, const Node &Start, const Node &G
 
 void executeSearch(const Node &Start, const Node &Goal, int heuristic, bool printSol = true) {
 
-	auto *starSearch = new aStarSearch();
-	// auto *focalSearch = new FocalSearch();
+	// auto *starSearch = new aStarSearch();
+	auto *focalSearch = new FocalSearch();
 
-	starSearch->setHeuristic(heuristic);
-	// focalSearch->setHeuristic(heuristic);
+	// starSearch->setHeuristic(heuristic);
+	focalSearch->setHeuristic(heuristic);
 
 	auto startTime = chrono::steady_clock::now();
-	int nExpanded = starSearch->AStarSearch(Start, Goal);
-	// int nExpanded = focalSearch->FocalSearchAlgorithm(Start, Goal, 2, 0.2);
+	// int nExpanded = starSearch->AStarSearch(Start, Goal);
+	int nExpanded = focalSearch->FocalSearchAlgorithm(Start, Goal, 2, 0.2);
 	auto endTime = chrono::steady_clock::now();
 
 	auto diff = endTime - startTime;
-	cout << "No of Steps: " << (int) starSearch->visited[Goal].cost_ << endl;
-	// cout << "No of Steps: " << (int) focalSearch->visited[Goal].cost << endl;
+	// cout << "No of Steps: " << (int) starSearch->visited[Goal].cost_ << endl;
+	cout << "No of Steps: " << (int) focalSearch->visited[Goal].cost << endl;
 	cout << "No of Nodes Expanded: " << nExpanded << endl;
-	cout << "No of Nodes Opened: " << starSearch->openedCount << endl;
-	// cout << "No of Nodes Opened: " << focalSearch->openedCount << endl;
-	cout << "No of Nodes Pushed: " << starSearch->nPushed << endl;
-	// cout << "No of Nodes Pushed: " << focalSearch->nPushed << endl;
-	cout << "Max Depth Reached: " << starSearch->max_depth << endl;
-	// cout << "Max Depth Reached: " << focalSearch->max_depth << endl;
+	// cout << "No of Nodes Opened: " << starSearch->openedCount << endl;
+	cout << "No of Nodes Opened: " << focalSearch->openedCount << endl;
+	// cout << "No of Nodes Pushed: " << starSearch->nPushed << endl;
+	cout << "No of Nodes Pushed: " << focalSearch->nPushed << endl;
+	// cout << "Max Depth Reached: " << starSearch->max_depth << endl;
+	cout << "Max Depth Reached: " << focalSearch->max_depth << endl;
 	cout << "Execution Time: " << chrono::duration<double, milli>(diff).count() << "ms" << endl;
 	cout << endl;
 	fflush(stdout);
 
-	if (printSol) printSolution(*starSearch, Start, Goal);
-	delete starSearch;
-	// if (printSol) printSolutionFocal(*focalSearch, Start, Goal);
-	// delete focalSearch;
+	// if (printSol) printSolution(*starSearch, Start, Goal);
+	// delete starSearch;
+	if (printSol) printSolutionFocal(*focalSearch, Start, Goal);
+	delete focalSearch;
 }
 
 int main() {
@@ -103,8 +103,8 @@ int main() {
 	cout << "Start: \n" << Start;
 	cout << "Goal: \n" << Goal;
 	// cout << aStarSearch::ManHattan(Start, Goal) << endl;
-//	cout << aStarSearch::HammingDistance(Start, Goal) << endl;
-//	cout << aStarSearch::nLinearConflicts(Start, Goal) << endl;
+	// cout << aStarSearch::HammingDistance(Start, Goal) << endl;
+	// cout << aStarSearch::nLinearConflicts(Start, Goal) << endl;
 
 	if (!Start.isSolveAble()) {
 		cout << "No Solution" << endl;

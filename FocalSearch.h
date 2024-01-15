@@ -1,5 +1,6 @@
 //
 // Created by DELL 7480 on 11/21/2023.
+// Paper: https://www.ijcai.org/Proceedings/2018/0199.pdf
 //
 
 #ifndef FOCALSEARCH_H
@@ -9,7 +10,8 @@
 #include <unordered_map>
 #include <cmath>
 #include <set>
-
+#include <functional>
+#include <vector>
 #define OPEN 0
 #define FOCAL 1
 
@@ -30,18 +32,28 @@ typedef int parent_t;
 using namespace std;
 
 class FocalSearch {
+
 	struct OpenSetComparator {
 		const FocalSearch& fs;
 		const Node& goal;
 
 		OpenSetComparator(const FocalSearch& search, const Node& g) : fs(search), goal(g) {}
 
-		bool operator()(const pair<double, Node>& a, const pair<double, Node>& b) const {
-			double f_a = fs.fValue(a.second, goal);
-			double f_b = fs.fValue(b.second, goal);
-			return f_a == f_b ? a.second < b.second : f_a < f_b;
+		bool operator()(const pair<pair<double, size_t>, Node>& a, const pair<pair<double, size_t>, Node>& b) const {
+			auto it1 = fs.visited.find(a.second);
+			auto it2 = fs.visited.find(b.second);
+			const NodeInfo &aInfo = it1->second;
+			const NodeInfo &bInfo = it2->second;
+			// double f_a = fs.fValue(a.second, goal);
+			// double f_b = fs.fValue(b.second, goal);
+			
+			// return make_pair(f_a, a.first.second) < make_pair(f_b, b.first.second);
+			double fa = aInfo.cost;
+			double fb = bInfo.cost;
+			return make_pair(fa, a.first.second) < make_pair(fb, b.first.second);
 		}
 	};
+
 	struct FocalSetComparator {
 		const FocalSearch& fs;
 		const Node& goal;
@@ -49,9 +61,10 @@ class FocalSearch {
 		FocalSetComparator(const FocalSearch& search, const Node& g) : fs(search), goal(g) {}
 
 		bool operator()(const Node& a, const Node& b) const {
-			return fs.hValue(a, goal) < fs.hValue(b, goal);
+			return fs.hValue(a, goal) < fs.fValue(b, goal);
 		}
 	};
+
 public:
 	map<Node, NodeInfo> visited;
 	size_t openedCount;
@@ -61,6 +74,8 @@ public:
 
 	int hValue(const Node& current, const Node& goal) const {
 		if (heuristicType == MANHATTAN_DISTANCE) return ManHattan(current, goal);
+		else if (heuristicType == HAMMING_DISTANCE) return HammingDistance(current, goal);
+		else return LinearConflicts(current, goal);
 		return 0;
 	}
 
@@ -68,11 +83,16 @@ public:
 		// NodeInfo &currentInfo = visited[current];
 		// if (heuristicType == MANHATTAN_DISTANCE) return currentInfo.cost + ManHattan(current, goal);
 		// return 0;
+
 		auto it = visited.find(current);
 		if (it != visited.end()) {
 			const NodeInfo &currentInfo = it->second;
 			if (heuristicType == MANHATTAN_DISTANCE) {
 				return currentInfo.cost + ManHattan(current, goal);
+			} else if (heuristicType == HAMMING_DISTANCE) {
+				return currentInfo.cost + HammingDistance(current, goal);
+			} else {
+				return currentInfo.cost + LinearConflicts(current, goal);
 			}
 		}
 		return 0;
@@ -158,17 +178,28 @@ public:
 		heuristicType = heuristic;
 	}
 
+	size_t hashNode(const Node &node) {
+    	hash<puzzle_t> hasher;
+    	size_t hashValue = 0;
+
+    	for (int i = 0; i < Node::boardSqSize; ++i)
+        	for (int j = 0; j < Node::boardSqSize; ++j)
+            	hashValue ^= hasher(node.A[i][j]) + 0x9e3779b9 + (hashValue << 6) + (hashValue >> 2);
+
+    	return hashValue;
+	}
+
 	int FocalSearchAlgorithm(const Node &start, const Node &goal, double w, double ratio) {
 
 		OpenSetComparator openSetComparator(*this, goal);
-		set<pair<double, Node>, OpenSetComparator> open(openSetComparator);
+		set<pair<pair<double, size_t>, Node>, OpenSetComparator> open(openSetComparator);
 
 		FocalSetComparator focalSetComparator(*this, goal);
 		set<Node, FocalSetComparator> focalSet(focalSetComparator);
 
         map<Node, bool> isFocal;
 
-        open.insert({0, start});
+        open.insert({{0, hashNode(start)}, start});
         focalSet.insert(start);
 
 		visited[start] = {false, 0, EOF};
@@ -179,14 +210,15 @@ public:
 
         while (!focalSet.empty()) {
         	// fmin is f(head(open))
-			double fmin = open.empty() ? numeric_limits<double>::infinity() : open.begin()->first;
+			double fmin = open.empty() ? numeric_limits<double>::infinity() : open.begin()->first.first;
+			// cout << "fmin is " << fmin << endl;
 
             Node current;
 
             // if (open.empty() || rand() % 100 < ratio * 100) {
             //     current = *focalSet.begin();
             //     focalSet.erase(focalSet.begin());
-            // 	open.erase({fValue(current, goal), current});
+            // 	open.erase({{fValue(current, goal), hashNode(current)}, current});
             // } else {
             //     current = open.begin()->second;
             //     open.erase(open.begin());
@@ -195,11 +227,13 @@ public:
 
         	current = *focalSet.begin();
         	focalSet.erase(focalSet.begin());
-        	open.erase({fValue(current, goal), current});
+        	open.erase({{fValue(current, goal), hashNode(current)}, current});
 
 			NodeInfo &curInfo = visited[current];
         	curInfo.isClosed = true;
             nExpanded++;
+			//  cout << "Iteration: " << nExpanded << ", Focal Set Size: " << focalSet.size() << ", Open Set Size: " << open.size() << endl;
+			// cout << current << endl;
         	max_depth = max(max_depth, visited[current].cost);
 
             if (current == goal) return nExpanded;
@@ -228,8 +262,11 @@ public:
             		double newCost = curInfo.cost + 1;
             		++nPushed;
             		visited[v] = {false, static_cast<cost_t>(newCost), Node::oppositeDirection(dir)};
+
+					// cout << visited.size() << endl;
+
             		double Priority = newCost + Heuristic(v, goal);
-            		open.insert({Priority, v});
+            		open.insert({{Priority, hashNode(v)}, v});
 
             		if (Priority <= w * fmin) {
             			focalSet.insert(v);
@@ -238,10 +275,10 @@ public:
             	}
             }
 
-            if (!open.empty() && open.begin()->first > fmin) {
+            if (!open.empty() && open.begin()->first.first > fmin) {
                 for (auto it = open.begin(); it != open.end(); ++it) {
                     if (fValue(it->second, goal) > w * fmin ||
-                        fValue(it->second, goal) <= w * open.begin()->first) {
+                        fValue(it->second, goal) <= w * open.begin()->first.first) {
                         focalSet.insert(it->second);
                         isFocal[it->second] = true;
                     }
